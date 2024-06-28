@@ -1,7 +1,7 @@
 use image::ImageBuffer;
 use piston_window::{
-    EventLoop, EventSettings, Events, PistonWindow, Texture, TextureContext, TextureSettings,
-    WindowSettings,
+    EventLoop, EventSettings, Events, OpenGL, PistonWindow, Texture, TextureContext,
+    TextureSettings, WindowSettings,
 };
 use std::f64::consts::LN_2;
 
@@ -66,7 +66,8 @@ fn main() {
     let center = 3;
     let (center_x, center_y) = CENTER[center];
 
-    let mut window: PistonWindow = WindowSettings::new("mandlebrot set", [WIDTH, HEIGHT])
+    let mut window: PistonWindow = WindowSettings::new("mandelbrot set", [WIDTH, HEIGHT])
+        .graphics_api(OpenGL::V3_2)
         .build()
         .unwrap();
 
@@ -77,12 +78,18 @@ fn main() {
 
     let mut events = Events::new(EventSettings::new().lazy(false));
     let settings = TextureSettings::new();
+    let mut texture = Texture::from_image(
+        &mut texture_context,
+        &image::ImageBuffer::new(WIDTH, HEIGHT),
+        &settings,
+    )
+    .unwrap();
     while let Some(e) = events.next(&mut window) {
         window.draw_2d(&e, |c, g, device| {
             zoom += ZOOM_FACTOR;
             let data = mandelbrot_zoom_frame(WIDTH, HEIGHT, ITERATIONS, zoom, center_x, center_y);
-
-            let texture = Texture::from_image(&mut texture_context, &data, &settings).unwrap();
+            // as the zoom gets deeper this gets faster
+            texture.update(&mut texture_context, &data).unwrap();
             piston_window::image(&texture, c.transform, g);
             texture_context.encoder.flush(device);
         });
