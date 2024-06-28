@@ -4,7 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-num-complex = "0.4.6"
-colors-transform = "0.2.11"
-image = {version = "0.25.1", feature = ["rayon"]}
+image = {version = "0.25.1"}
 piston_window = "0.132.0"
