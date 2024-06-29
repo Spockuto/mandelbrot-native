@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 image = {version = "0.25.1"}
 piston_window = "0.132.0"
+rug = "1.24.1"
