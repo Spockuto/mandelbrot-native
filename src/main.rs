@@ -4,10 +4,10 @@ use piston_window::{
     TextureSettings, WindowSettings,
 };
 use rug::{Complex, Float};
-use std::{f64::consts::LN_2, vec};
+use std::{f64::consts::LN_2, path::Path};
 
 mod constants;
-use constants::{CENTER, HEIGHT, ITERATIONS, PALETTE, WIDTH, ZOOM_FACTOR};
+use constants::{CENTER, HEIGHT, ITERATIONS, PALETTE, PERTURBATION_SWITCH, WIDTH, ZOOM_FACTOR};
 
 fn scale_x(x: u32, width: u32, min_re: f64, max_re: f64, zoom: f64, center_re: f64) -> f64 {
     (center_re
@@ -50,9 +50,11 @@ fn mandelbrot_zoom_frame(
 
     let mut reference_points: Vec<(Float, Float)> = vec![z.clone().into_real_imag()];
     let mut cz = z.clone();
-    for _ in 0..iterations {
-        cz = cz.clone().square() + z.clone();
-        reference_points.push(cz.clone().into_real_imag());
+    if zoom >= PERTURBATION_SWITCH {
+        for _ in 0..iterations {
+            cz = cz.clone().square() + z.clone();
+            reference_points.push(cz.clone().into_real_imag());
+        }
     }
 
     ImageBuffer::from_par_fn(width, height, |x, y| {
@@ -60,9 +62,7 @@ fn mandelbrot_zoom_frame(
         let y0 = scale_y(y, height, -1.0, 1.0, zoom, center_y);
         let mut color = (iterations % palette_size) as f64;
 
-        if (x0 - center_x) * (x0 - center_x) + (y0 - center_y) * (y0 - center_y) > 1e-15_f64
-            || zoom > 1e8_f64
-        {
+        if zoom < PERTURBATION_SWITCH {
             let (mut z_x, mut z_y, mut x2, mut y2) = (0.0, 0.0, 0.0, 0.0);
             for i in 0..iterations {
                 z_y = (z_x + z_x) * z_y + y0;
@@ -144,12 +144,34 @@ fn main() {
     .unwrap();
     while let Some(e) = events.next(&mut window) {
         window.draw_2d(&e, |c, g, device| {
-            zoom += ZOOM_FACTOR;
+            zoom *= ZOOM_FACTOR;
             let data = mandelbrot_zoom_frame(WIDTH, HEIGHT, ITERATIONS, zoom, center_x, center_y);
+            // save_image(&data, zoom, center_x, center_y);
             // As we zoom in, this gets faster but we lose precision due to f64
             texture.update(&mut texture_context, &data).unwrap();
             piston_window::image(&texture, c.transform, g);
             texture_context.encoder.flush(device);
         });
     }
+}
+
+#[allow(dead_code)]
+fn save_image(
+    data: &ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+    zoom: f64,
+    center_x: f64,
+    center_y: f64,
+) {
+    let path = format!(
+        "/home/venky/Desktop/mandelbrot/smily_brot_2/{:.2}_{:.2}_{:.2}.png",
+        zoom, center_x, center_y
+    );
+    image::save_buffer(
+        Path::new(&path),
+        data,
+        WIDTH,
+        HEIGHT,
+        image::ExtendedColorType::Rgba8,
+    )
+    .unwrap()
 }
